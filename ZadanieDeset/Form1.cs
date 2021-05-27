@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -253,7 +253,12 @@ namespace ZadanieDeset
             //==========PROVERKI
             using (SqlConnection connection = new SqlConnection(GetSQLCOnnection()))
             {
-                string query = @"INSERT INTO Razpisi (Reg_nomer, Marka, Godina, Cena, EGN, Ime_Familiq, Prod_nomer, Data_prodajba) VALUES ('"+reg_nomer.Text+"', N'"+marka.Text+"', '"+godina.Text+"', '"+cena.Text+"', '"+egn.Text+"', N'"+imeFamiliq.Text+"', '"+prod_nomer.Text+"', '"+data_prod.Text+"')";
+                string time = getTime();
+                string query = "";
+                if (string.IsNullOrEmpty(data_prod.Text) || string.IsNullOrWhiteSpace(data_prod.Text) || string.IsNullOrEmpty(prod_nomer.Text) || string.IsNullOrWhiteSpace(prod_nomer.Text))
+                    query = @"INSERT INTO Razpisi (Reg_nomer, Marka, Godina, Cena, EGN, Ime_Familiq) VALUES ('" + reg_nomer.Text + "', N'" + marka.Text + "', '" + godina.Text + "', '" + cena.Text + "', '" + egn.Text + "', N'" + imeFamiliq.Text + "')";
+                else
+                    query = @"INSERT INTO Razpisi (Reg_nomer, Marka, Godina, Cena, EGN, Ime_Familiq, Prod_nomer, Data_prodajba) VALUES ('" + reg_nomer.Text + "', N'" + marka.Text + "', '" + godina.Text + "', '" + cena.Text + "', '" + egn.Text + "', N'" + imeFamiliq.Text + "', '" + prod_nomer.Text + "', '" + time + "')";
                 SqlCommand cmd = new SqlCommand(query, connection);
                 connection.Open();
                 cmd.ExecuteNonQuery();
@@ -299,14 +304,14 @@ namespace ZadanieDeset
             ProveriPrazni();
             if (error.Text != string.Empty)
                 return;
-            ProveriPovtarqshtiseNomera();
             ProveriDanni();
             if (error.Text != string.Empty)
                 return;
             //==========PROVERKI
             using (SqlConnection connection = new SqlConnection(GetSQLCOnnection()))
             {
-                string query1 = @$"UPDATE Razpisi SET Marka = N'{marka.Text}', Godina = '{int.Parse(godina.Text)}', Cena = '{int.Parse(cena.Text)}', EGN = '{egn.Text}', Ime_Familiq = N'{imeFamiliq.Text}', Prod_nomer = '{int.Parse(prod_nomer.Text)}', Data_prodajba = '{Convert.ToDateTime(data_prod.Text)}' WHERE Reg_nomer = {reg_num}";
+                string time = getTime();
+                string query1 = @$"UPDATE Razpisi SET Marka = N'{marka.Text}', Godina = '{int.Parse(godina.Text)}', Cena = '{int.Parse(cena.Text)}', EGN = '{egn.Text}', Ime_Familiq = N'{imeFamiliq.Text}', Prod_nomer = '{int.Parse(prod_nomer.Text)}', Data_prodajba = '{time}' WHERE Reg_nomer = {reg_num}";
                 SqlCommand cmd1 = new SqlCommand(query1, connection);
                 connection.Open();
                 cmd1.ExecuteNonQuery();
@@ -322,6 +327,7 @@ namespace ZadanieDeset
             }
 
             reg_nomer.ReadOnly = false;
+            prod_nomer.ReadOnly = false;
             reg_nomer.Text = "";
             marka.Text = "";
             godina.Text = "";
@@ -411,10 +417,11 @@ namespace ZadanieDeset
                     check = true;
                 }
 
+                string time = getTime();
                 if (data_prod.Text != "" && check == false)
-                    query += $" Data_prodajba = '{data_prod.Text}'";
+                    query += $" Data_prodajba = '{time}'";
                 else if (data_prod.Text != "" && check == true)
-                    query += $" AND Data_prodajba = '{data_prod.Text}'";
+                    query += $" AND Data_prodajba = '{time}'";
 
                 try
                 {
@@ -636,6 +643,43 @@ namespace ZadanieDeset
                 {
                     if (dgv.SelectedRows.Count > 0)
                     {
+                        try
+                        {
+                            DataGridViewRow row = dgv.SelectedRows[0];
+                            reg_nomer.Text = "" + (int)row.Cells["Reg_nomer"].Value;
+                            marka.Text = (string)row.Cells["Marka"].Value;
+                            godina.Text = "" + (int)row.Cells["Godina"].Value;
+                            cena.Text = "" + (int)row.Cells["Cena"].Value;
+                            egn.Text = (string)row.Cells["EGN"].Value;
+                            imeFamiliq.Text = (string)row.Cells["Ime_Familiq"].Value;
+                            prod_nomer.Text = "" + (int)row.Cells["Prod_nomer"].Value;
+                            DateTime time = (DateTime)row.Cells["Data_prodajba"].Value;
+                            data_prod.Text = "" + time.ToShortDateString();
+                        }
+                        catch (Exception ex)
+                        {
+                            DataGridViewRow row = dgv.SelectedRows[0];
+                            reg_nomer.Text = "" + (int)row.Cells["Reg_nomer"].Value;
+                            marka.Text = (string)row.Cells["Marka"].Value;
+                            godina.Text = "" + (int)row.Cells["Godina"].Value;
+                            cena.Text = "" + (int)row.Cells["Cena"].Value;
+                            egn.Text = (string)row.Cells["EGN"].Value;
+                            imeFamiliq.Text = (string)row.Cells["Ime_Familiq"].Value;
+                        }
+
+                        reg_nomer.ReadOnly = true;
+                        prod_nomer.ReadOnly = true;
+                    }
+                    else
+                        error.Text = "Не може да редактирате ред без да сте го маркирали";
+                }
+            }
+            else
+            {
+                if (dgv.SelectedRows.Count > 0)
+                {
+                    try
+                    {
                         DataGridViewRow row = dgv.SelectedRows[0];
                         reg_nomer.Text = "" + (int)row.Cells["Reg_nomer"].Value;
                         marka.Text = (string)row.Cells["Marka"].Value;
@@ -646,29 +690,20 @@ namespace ZadanieDeset
                         prod_nomer.Text = "" + (int)row.Cells["Prod_nomer"].Value;
                         DateTime time = (DateTime)row.Cells["Data_prodajba"].Value;
                         data_prod.Text = "" + time.ToShortDateString();
-
-                        reg_nomer.ReadOnly = true;
                     }
-                    else
-                        error.Text = "Не може да редактирате ред без да сте го маркирали";
-                }
-            }
-            else
-            {
-                if (dgv.SelectedRows.Count > 0)
-                {
-                    DataGridViewRow row = dgv.SelectedRows[0];
-                    reg_nomer.Text = "" + (int)row.Cells["Reg_nomer"].Value;
-                    marka.Text = (string)row.Cells["Marka"].Value;
-                    godina.Text = "" + (int)row.Cells["Godina"].Value;
-                    cena.Text = "" + (int)row.Cells["Cena"].Value;
-                    egn.Text = (string)row.Cells["EGN"].Value;
-                    imeFamiliq.Text = (string)row.Cells["Ime_Familiq"].Value;
-                    prod_nomer.Text = "" + (int)row.Cells["Prod_nomer"].Value;
-                    DateTime time = (DateTime)row.Cells["Data_prodajba"].Value;
-                    data_prod.Text = "" + time.ToShortDateString();
+                    catch (Exception ex)
+                    {
+                        DataGridViewRow row = dgv.SelectedRows[0];
+                        reg_nomer.Text = "" + (int)row.Cells["Reg_nomer"].Value;
+                        marka.Text = (string)row.Cells["Marka"].Value;
+                        godina.Text = "" + (int)row.Cells["Godina"].Value;
+                        cena.Text = "" + (int)row.Cells["Cena"].Value;
+                        egn.Text = (string)row.Cells["EGN"].Value;
+                        imeFamiliq.Text = (string)row.Cells["Ime_Familiq"].Value;
+                    }
 
                     reg_nomer.ReadOnly = true;
+                    prod_nomer.ReadOnly = true;
                 }
                 else
                     error.Text = "Не може да редактирате ред без да сте го маркирали";
@@ -866,6 +901,21 @@ namespace ZadanieDeset
 
 
         // ======================== proverki
+        private string getTime()
+        {
+            string temp = data_prod.Text;
+            string[] arr = temp.Split("/");
+            temp = "";
+            if (arr[1].StartsWith("0"))
+                temp.TrimStart(new Char[] { '0' });
+            temp = arr[1];
+            if (arr[0].StartsWith("0"))
+                temp.TrimStart(new Char[] { '0' });
+            temp = temp + "/" + arr[0];
+            temp = temp + "/" + arr[2];
+            return temp;
+        }
+
         private void ProveriPrazni()
         {
             if (reg_nomer.Text.Length == 0 || marka.Text.Length == 0 || godina.Text.Length == 0 || cena.Text.Length == 0 || egn.Text.Length == 0 || imeFamiliq.Text.Length == 0)
@@ -910,8 +960,15 @@ namespace ZadanieDeset
                 if (row.Cells["Prod_nomer"].Value != DBNull.Value)
                 {
                     temp = (int)row.Cells["Prod_nomer"].Value;
-                    if (temp == int.Parse(prod_nomer.Text))
-                        error.Text = "Този номер на продажба вече съществува";
+                    try
+                    {
+                        if (temp == int.Parse(prod_nomer.Text))
+                            error.Text = "Този номер на продажба вече съществува";
+                    }
+                    catch (Exception ex)
+                    {
+                        string s = ex.Message;
+                    }
                 }
             }
         }
